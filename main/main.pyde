@@ -9,16 +9,11 @@ dt = 10  # s
 
 
 # world coordinates
-x_min = -1.75122595*10**12
-x_max = 1.75122595*10**12
+x_min = -3.5*10**12.3
+x_max = 3.5*10**12.3
 
-y_min = -1.75122595*10**12
-y_max = 1.75122595*10**12
-
-
-# screen dimensions in px
-screen_width = None
-screen_height = None
+y_min = -3.5*10**12.3
+y_max = 3.5*10**12.3
 
 
 # convert meter to pixels
@@ -145,7 +140,7 @@ def setup():
                    r=(8.511*10**8),
                    m=(2.188*10**30),
                    fixed=True,
-                   scale_factor=300,
+                   scale_factor=500,
                    color=(0, 0, 255),
                    )
     bodies.append(alpha_A)
@@ -179,7 +174,7 @@ def draw():
     for body in bodies:
 
         # gravity
-        body.ax += 0
+        body.ax += 9.81
 
         # # drag
         # k = 0.01
