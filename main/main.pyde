@@ -17,8 +17,8 @@ y_max = 1.75122595*10**12
 
 
 # screen dimensions in px
-screen_width = 500
-screen_height = 500
+screen_width = None
+screen_height = None
 
 
 # convert meter to pixels
@@ -49,7 +49,7 @@ def distance(bodyA, bodyB):
 # class for interactions between bodies
 class Interaction:
 
-    def __init__(self, bodyA, bodyB, k=30):
+    def __init__(self, bodyA, bodyB, k=30, color=(255, 255, 255)):
         self.bodyA = bodyA
         self.bodyB = bodyB
 
@@ -57,7 +57,7 @@ class Interaction:
 
         self.k = k
 
-        self.color = (255, 255, 255)
+        self.color = color
 
     # hooke law
     def update(self):
@@ -133,7 +133,11 @@ class Body:
 # ------------
 
 def setup():
-    size(screen_width, screen_height)
+    global screen_width, screen_height
+    # screen dimensions in px
+    screen_width = displayWidth
+    screen_height = displayHeight
+    fullScreen()
     frameRate(120)
 
     alpha_A = Body(x=0, y=0,
@@ -141,7 +145,8 @@ def setup():
                    r=(8.511*10**8),
                    m=(2.188*10**30),
                    fixed=True,
-                   scale_factor=500
+                   scale_factor=300,
+                   color=(0, 0, 255),
                    )
     bodies.append(alpha_A)
 
@@ -151,11 +156,11 @@ def setup():
                    m=(1.804*10**30),
                    fixed=True,
                    color=(0, 255, 0),
-                   scale_factor=500
+                   scale_factor=500,
                    )
     bodies.append(alpha_B)
 
-    interaction_12 = Interaction(alpha_A, alpha_B, k=200)
+    interaction_12 = Interaction(alpha_A, alpha_B, k=200, color=(255, 0, 0))
     interactions.append(interaction_12)
 
 
