@@ -5,7 +5,10 @@ bodies = []
 interactions = []
 
 # timestep size
-dt = 10  # s
+dt = 100  # s
+
+# Scale factor to make objects visible
+SCALE_FACTOR = 500
 
 
 # world coordinates
@@ -48,7 +51,7 @@ class Interaction:
         self.bodyA = bodyA
         self.bodyB = bodyB
 
-        self.d = distance(bodyA, bodyB)
+        self.d = distance(bodyA, bodyB)  # initial direct distance between bodies
 
         self.k = k
 
@@ -57,18 +60,19 @@ class Interaction:
     # hooke law
     def update(self):
 
-        rx = self.bodyA.x - self.bodyB.x
-        ry = self.bodyA.y - self.bodyB.y
+        dx = self.bodyA.x - self.bodyB.x  # x difference between bodies
+        dy = self.bodyA.y - self.bodyB.y  # y difference between bodies
 
-        d = (rx**2 + ry**2) ** 0.5
+        d = (dx**2 + dy**2) ** 0.5  # current direct distance between bodies
+        # self.d is the initial distance between bodies
 
         F = self.k * (d - self.d) / d
 
-        self.bodyB.ax += F * rx / self.bodyB.m
-        self.bodyB.ay += F * ry / self.bodyB.m
+        self.bodyB.ax += F * dx / self.bodyB.m
+        self.bodyB.ay += F * dy / self.bodyB.m
 
-        self.bodyA.ax += -F * rx / self.bodyA.m
-        self.bodyA.ay += -F * ry / self.bodyA.m
+        self.bodyA.ax += -F * dx / self.bodyA.m
+        self.bodyA.ay += -F * dy / self.bodyA.m
 
     def draw(self):
         stroke(self.color[0], self.color[1], self.color[2])
@@ -81,7 +85,7 @@ class Interaction:
 
 class Body:
 
-    def __init__(self, x, y, vx=0, vy=0, r=0.5, m=1.0, fixed=False, color=(255, 255, 255), scale_factor=1):
+    def __init__(self, x, y, vx=0, vy=0, r=0.5, m=1.0, color=(255, 255, 255)):
         self.x = x
         self.y = y
 
@@ -95,20 +99,16 @@ class Body:
 
         self.r = r
 
-        self.fixed = fixed
-
         self.color = color
-        self.scale_factor = scale_factor
 
     # perform euler cromer step
     def update(self, dt):
 
-        if not self.fixed:
-            self.vx = self.ax * dt + self.vx
-            self.vy = self.ay * dt + self.vy
+        self.vx = self.ax * dt + self.vx
+        self.vy = self.ay * dt + self.vy
 
-            self.x = self.vx * dt + self.x
-            self.y = self.vy * dt + self.y
+        self.x = self.vx * dt + self.x
+        self.y = self.vy * dt + self.y
 
     def clear(self):
         self.ax = 0
@@ -121,7 +121,7 @@ class Body:
         x, y = to_pixel(self.x, self.y)
         r_x, r_y = to_pixel(self.x + self.r, self.y + self.r)
 
-        circle(x, y, self.scale_factor * (2 * (r_x - x)))
+        circle(x, y, SCALE_FACTOR * (2 * (r_x - x)))
 
 # ------------
 # Processing-specific functions
@@ -136,26 +136,22 @@ def setup():
     frameRate(120)
 
     alpha_A = Body(x=0, y=0,
-                   vx=0, vy=0,
+                   vx=-10**8, vy=0,
                    r=(8.511*10**8),
                    m=(2.188*10**30),
-                   fixed=True,
-                   scale_factor=500,
                    color=(0, 0, 255),
                    )
     bodies.append(alpha_A)
 
     alpha_B = Body(x=0, y=(3.501*10**12),
-                   vx=0, vy=0,
+                   vx=10**8, vy=0,
                    r=(6.008*10**8),
                    m=(1.804*10**30),
-                   fixed=True,
                    color=(0, 255, 0),
-                   scale_factor=500,
                    )
     bodies.append(alpha_B)
 
-    interaction_12 = Interaction(alpha_A, alpha_B, k=200, color=(255, 0, 0))
+    interaction_12 = Interaction(alpha_A, alpha_B, k=20000000000000000000, color=(255, 0, 0))
     interactions.append(interaction_12)
 
 
@@ -164,25 +160,25 @@ def draw():
     background(0)
 
     # clear all accelerations
-    for body in bodies:
-        body.clear()
+    # for body in bodies:
+    #     body.clear()
 
     # calculate interactions
     for interaction in interactions:
         interaction.update()
 
     for body in bodies:
-
-        # gravity
-        body.ax += 9.81
-
-        # # drag
-        # k = 0.01
-        # body.ax += -k * body.vx
-        # body.ay += -k * body.vy
-
         body.update(dt)
         body.draw()
 
     for interaction in interactions:
+        interaction.update()
         interaction.draw()
+        
+        
+        
+def keyPressed():
+    curr_key = key
+    print(curr_key)
+    if curr_key in ("q", "Q"):
+        exit()
