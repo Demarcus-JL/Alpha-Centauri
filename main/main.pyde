@@ -175,10 +175,8 @@ def draw():
         interaction.update()
         interaction.draw()
         
+
         
-        
-def keyPressed():
-    curr_key = key
-    print(curr_key)
-    if curr_key in ("q", "Q"):
+def keyReleased():
+    if key in ("q", "Q"):
         exit()
