@@ -1,15 +1,7 @@
 """
-Things to clear up:
-Vectors: we can express all positions, velocities and accelerations through vectors, which would make the whole thing easier.
-    However, we need to decide upon a place to put the origin of the coordinate system, as positions will always be position vectors (no shit).
-    Possibilities that could make sense:
-        - middle: dividing the screen into 4 quadrants with different signs for x and y
-            - pro: easier scaling by just changing the length from the middle to one side (because the viewport is square)
-            - contra: weird situations in which signs of vector components differ, although this might not be that tragic
-        - bottom left: y becomes positive towards the top, x becomes positive towards the right.
-            - pro: all position vectors have positive components and it's easier to imagine when programming (in my opinion at least)
-            - contra: scaling the viewport would mean to move everything more towards the top right and then increasing the size of the screen
-                (this could probably be prevented by using a good conversion from m to px, so it remains to be tested...)
+ALL POSITION VECTORS HAVE THEIR ORIGIN IN THE BOTTOM LEFT
+
+ORIGIN = BOTTOM LEFT = (0, 0)
 """
 
 # region constants
@@ -17,6 +9,25 @@ TIMESTEP = 1 #100  # s
 SCALE_FACTOR = 1 #500  # Magnification of objects to account for large distances
 VIEWPORT = (-10, 10) #(-3.5 * 10**12.3, 3.5 * 10**12.3)  # viewport limits in m for a square viewport
 # endregion constants
+
+
+def m_to_px(pos):
+    """Convert metric units to pixels for the specified display
+
+    Args:
+        pos (Vector): position vector of the point, in m
+
+    Returns:
+        Vector: position vector of the point, in px
+    """
+    print("in m_to_px function")
+    view_size = VIEWPORT[1] - VIEWPORT[0]  # viewport sidelength in m
+    print("view_size =", view_size)
+    #       (distance from edge) *     (pixels per m)
+    result = (pos - VIEWPORT[0]) * SCREEN_SIZE / view_size
+    print("result =", result)
+    return result
+
 
 class Vector:
     """Vector class to make the calculation of speeds and positions easier"""
@@ -116,7 +127,6 @@ class Body:
         print("in body.draw function")
         fill(self.colour[0], self.colour[1], self.colour[2])  # unpack the tuple into the fill function (WARNING: MIGHT NOT WORK ON PYPROCESSING)
         print("set fill colour")
-        circle(0, 0, 300)
         circle(self.pos.dx, self.pos.dy, SCALE_FACTOR * 2 * m_to_px(self.radius).dx)  # unpack the tuple into the first 2 args of the circle functoin (WARNING: MIGHT NOT WORK ON PYPROCESSING)
         print("circle drawn")
 
@@ -165,25 +175,6 @@ class Interaction:
         pos1x, pos1y = m_to_px(self.bodies[0].pos)
         pos2x, pos2y = m_to_px(self.bodies[1].pos)
         line(pos1x, pos1y, pos2x, pos2y)
-
-
-
-def m_to_px(pos):
-    """Convert metric units to pixels for the specified display
-
-    Args:
-        pos (Vector): position vector of the point, in m
-
-    Returns:
-        Vector: position vector of the point, in px
-    """
-
-    view_size = VIEWPORT[1] - VIEWPORT[0]  # viewport sidelength in m
-    print("view_size =", view_size)
-    #       (distance from edge) *     (pixels per m)
-    result = (pos - VIEWPORT[0]) * SCREEN_SIZE / view_size
-    print("result =", result)
-    return result
 
 
 # region processing-specific functions
