@@ -1,0 +1,2 @@
+https://www.geeksforgeeks.org/force-of-attraction-formula/ - Formula of attraction between planets
+https://physicscatalyst.com/article/components-of-a-vector/ - Extracting the vector components for acceleration of stars
