@@ -128,11 +128,11 @@ class Body:
 # ------------
 
 def setup():
+# displayHeight variablel seems to break everything when called from the setup() function
     global screen_width, screen_height
     # screen dimensions in px
-    screen_width = displayWidth
-    screen_height = displayHeight
-    fullScreen()
+    screen_size = displayHeight - 50
+    size(screen_size, screen_size)
     frameRate(120)
 
     alpha_A = Body(x=0, y=0,
@@ -157,7 +157,7 @@ def setup():
 
 def draw():
 
-    background(0)
+    background(255, 0, 0)
 
     # clear all accelerations
     # for body in bodies:

@@ -127,7 +127,8 @@ class Body:
         print("in body.draw function")
         fill(self.colour[0], self.colour[1], self.colour[2])  # unpack the tuple into the fill function (WARNING: MIGHT NOT WORK ON PYPROCESSING)
         print("set fill colour")
-        circle(self.pos.dx, self.pos.dy, SCALE_FACTOR * 2 * m_to_px(self.radius).dx)  # unpack the tuple into the first 2 args of the circle functoin (WARNING: MIGHT NOT WORK ON PYPROCESSING)
+        print("coordinates:", str(self.pos.dx), str(self.pos.dy))
+        circle(self.pos.dx + 1, self.pos.dy + 1, SCALE_FACTOR * 2 * m_to_px(self.radius).dx)  # unpack the tuple into the first 2 args of the circle functoin (WARNING: MIGHT NOT WORK ON PYPROCESSING)
         print("circle drawn")
 
 
@@ -140,6 +141,7 @@ class Interaction:
         if len(bodies) != 2:
             raise ValueError("The first argument must be a tuple containing 2 Body() instances")
         self.bodies = bodies
+        print("defined bodies in interaction:", str(bodies))
         self.colour = colour
 
     def update(self):
@@ -148,21 +150,29 @@ class Interaction:
         Use Newton's gravitational constant to calculate force of attraction based on mass and distance:
         `F = G * (m1 * m2) / r**2`
         """
+        print("interaction update function entered")
         # Get distance differences in x and y components
         dx = self.bodies[0].pos.dx - self.bodies[1].pos.dx
         dy = self.bodies[0].pos.dy - self.bodies[1].pos.dy
+        print("got dy and dx")
         # Get direct distance between the two bodies
         r = ((dx) ** 2 + (dy) ** 2) ** 0.5
+        print("got distance")
         # Get magnitude of resulting force vector
-        F = 6.674 * 10 ** -11 * (self.bodies[0].m * self.bodies[1].m) / (r ** 2)
+        F = 6.674 * 10 ** -11 * ((self.bodies[0].m * self.bodies[1].m) / (r ** 2))
+        print("got vector magnitude")
         # Get angle of interaction with respect to x-axis
         phi = arcsin(dy/dx)
+        print("got phi")
         # Turn resulting vector into a vector class
         F_vec = Vector(cos(phi) * F, sin(phi) * F)
+        print("got resulting vector")
 
         # Apply force to bodies
         for body in self.bodies:
             body.a = F_vec / body.m
+        
+        print("applied force to all bodies, exiting update function...")
 
     def draw(self):
         """Draw the interaction, marking the involved bodies and the path of force"""
@@ -189,6 +199,7 @@ def setup():
     # Set up alpha centauri A
     bodies.append(
         Body(
+            start_position=(Vector(1, 1)),
             radius=2, #(8.511*10**8),
             mass=40, #(2.188*10**30),
             colour=(0, 0, 255)
@@ -208,7 +219,7 @@ def setup():
     #     Interaction(bodies, colour=(255, 0, 0))
     # )
 
-    print("setup completed")
+    # print("setup completed")
 
 
 def draw():
