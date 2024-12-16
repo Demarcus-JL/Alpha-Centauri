@@ -136,7 +136,8 @@ while running:
             running = False
 
         elif event.type == pygame.KEYDOWN:
-            if event.key == "q":
+            if event.key == pygame.K_q:
+                print("q key pressed, exiting...")
                 running = False
 
     # Clear screen to black
