@@ -1,9 +1,12 @@
 import pygame
 
 # Set up pygame window
-WINDOW_SIZE = 720
 pygame.init()
-screen = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE))
+# TODO make native resolution
+screen: pygame.surface = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+# Get display size
+SCREEN_WIDTH, SCREEN_HEIGHT = screen.get_width(), screen.get_height()
+print(f"width: {SCREEN_WIDTH}, height: {SCREEN_HEIGHT}")
 clock = pygame.time.Clock()
 FPS = 60
 running = True
@@ -26,8 +29,68 @@ y_min = -3.5*10**12.3
 y_max = 3.5*10**12.3
 
 
+class Vector:
+    """Vector class to make the calculation of speeds and positions easier"""
+    def __init__(self, dx, dy):
+        self.dx = dx
+        self.dy = dy
+        self.magnitude = (self.dx**2 + self.dy**2) ** 0.5
+
+    def __repr__(self):
+        """String representation of the Vector"""
+        return "Vector(" + str(self.dx) + ", " + str(self.dy) + ")"
+
+    def __iter__(self):
+        """Define iterable behaviour of the vector so it can be treated and unpacked like a tuple"""
+        return iter((self.dx, self.dy))
+
+    def __add__(self, obj):
+        """Dunder method for adding two vectors
+
+        Args:
+            obj (Vector): The vector to be added
+
+        Returns:
+            Vector: resulting vector
+        """
+        return Vector(self.dx + obj.dx, self.dy + obj.dy)
+
+    def __sub__(self, obj):
+        """Dunder method for subtracting two vectors
+
+        Args:
+            obj (Vector): The vector to be subtracted
+
+        Returns:
+            Vector: resulting vector
+        """
+        return Vector(self.dx - obj.dx, self.dy - obj.dy)
+
+    def __mul__(self, k):
+        """Dunder method for multiplying a Vector by a scalar
+
+        Args:
+            k (float): scalar to be multiplied by
+
+        Returns:
+            Vector: resulting vector
+        """
+        return Vector(self.dx * k, self.dy * k)
+
+    def __truediv__(self, k):
+        """Dunder method for dividing a Vector by a scalar
+
+        Args:
+            k (float): scalar to be divided by
+
+        Returns:
+            Vector: resulting vector
+        """
+        return Vector(self.dx / k, self.dy / k)
+
+
 # convert meter to pixels
-def to_pixel(x, y):
+def to_pixel(pos: Vector) -> list[int, int]:
     """Return the coordinates in pixels, generated from the metric system.
 
     Args:
