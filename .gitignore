@@ -1,3 +1,17 @@
-*/*.xopp
-.venv/*
-*/*.pyc
+# Ignore all .xopp files in subdirectories
+**/*.xopp
+
+# Ignore Python virtual environment
+.venv/
+
+# Ignore compiled Python files
+*.pyc
+
+# Ignore VSCode configuration files
+.vscode/
+
+# Ignore mypy cache
+.mypy_cache/
+
+# Ignore Python __pycache__ directories
+__pycache__/
