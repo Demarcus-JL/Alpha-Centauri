@@ -1,216 +1,172 @@
+"""Module docsting here"""
+
+import sys
 import pygame
+from config import FPS, TIMESTEP, START_SCREEN_SIZE, G
+from objects import Vector, Body, Interaction, CursorPosition
 
-# Set up pygame window
-pygame.init()
-# TODO make native resolution
-screen: pygame.surface = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-# Get display size
-SCREEN_WIDTH, SCREEN_HEIGHT = screen.get_width(), screen.get_height()
-print(f"width: {SCREEN_WIDTH}, height: {SCREEN_HEIGHT}")
-clock = pygame.time.Clock()
-FPS = 60
-running = True
+# TODO: write unit tests for to_pixel, because I'm not sure it works properly
 
-# list of bodies
-bodies = []
-# list of interactions
-interactions = []
-# timestep size
-dt = 100  # s
-# Scale factor to make objects visible
-SCALE_FACTOR = 500
+DEBUG: bool = False
+SIMULATION_PAUSED: bool = False
 
 
-# world coordinates
-x_min = -3.5*10**12.3
-x_max = 3.5*10**12.3
+# TODO remove this when done
+def show_viewport() -> None:
+    """Print the current viewport and screen limits to the console."""
+    print(f"top right: {cursor_position.world_limits.dx:.2e} x {cursor_position.world_limits.dy:.2e}")
+    print(f"bottom left: {cursor_position.world_start.dx:.2e} x {cursor_position.world_start.dy:.2e}")
+    print()
 
-y_min = -3.5*10**12.3
-y_max = 3.5*10**12.3
+pygame.init()  # Initialize pygame
 
+# Initialize pygame-related stuff
+screen: pygame.Surface = pygame.display.set_mode(START_SCREEN_SIZE, pygame.RESIZABLE)
+clock: pygame.time.Clock = pygame.time.Clock()  # Clock to manage frame rate
 
-class Vector:
-    """Vector class to make the calculation of speeds and positions easier"""
-    def __init__(self, dx, dy):
-        self.dx = dx
-        self.dy = dy
-        self.magnitude = (self.dx**2 + self.dy**2) ** 0.5
+# Data structures for simulation
+bodies: list[Body] = []
+interactions: list[Interaction] = []
 
-    def __repr__(self):
-        """String representation of the Vector"""
-        return "Vector(" + str(self.dx) + ", " + str(self.dy) + ")"
+# Viewport and screen sizes for scaling
+cursor_position: CursorPosition = CursorPosition(
+    Vector(screen.get_width(), screen.get_height()), Vector(7e12, 7e12)
+)
 
-    def __iter__(self):
-        """Define iterable behaviour of the vector so it can be treated and unpacked like a tuple"""
-        return iter((self.dx, self.dy))
-
-    def __add__(self, obj):
-        """Dunder method for adding two vectors
-
-        Args:
-            obj (Vector): The vector to be added
-
-        Returns:
-            Vector: resulting vector
-        """
-        return Vector(self.dx + obj.dx, self.dy + obj.dy)
-
-    def __sub__(self, obj):
-        """Dunder method for subtracting two vectors
-
-        Args:
-            obj (Vector): The vector to be subtracted
-
-        Returns:
-            Vector: resulting vector
-        """
-        return Vector(self.dx - obj.dx, self.dy - obj.dy)
-
-    def __mul__(self, k):
-        """Dunder method for multiplying a Vector by a scalar
-
-        Args:
-            k (float): scalar to be multiplied by
-
-        Returns:
-            Vector: resulting vector
-        """
-        return Vector(self.dx * k, self.dy * k)
-
-    def __truediv__(self, k):
-        """Dunder method for dividing a Vector by a scalar
-
-        Args:
-            k (float): scalar to be divided by
-
-        Returns:
-            Vector: resulting vector
-        """
-        return Vector(self.dx / k, self.dy / k)
-
-
-# convert meter to pixels
-def to_pixel(pos: Vector) -> list[int, int]:
-    """Return the coordinates in pixels, generated from the metric system.
+def to_pixel(pos: Vector) -> Vector:
+    """Return the coordinates as a Vector of px values, generated from the metric Vector as input.
 
     Args:
-        x (int): x coordinate in m
-        y (int): y coordinate in m
+        pos (Vector): coordinates in m
 
     Returns:
-        tuple(int, int): coordinates in px
+        Vector: coordinates in px
     """
-    w = x_max - x_min  # width of the world in m
-    h = y_max - y_min  # height of the world in m
+    relative_positions: Vector = pos / cursor_position.world_limits
+    result = Vector(relative_positions.dx, 1 - relative_positions.dy) * cursor_position.screen_limits
 
-    x_scr = (x - x_min) * WINDOW_SIZE / w
-    y_scr = (y_max - y) * WINDOW_SIZE / h
+    return result
 
-    return x_scr, y_scr
+def handle_keypress(key_event: pygame.event.Event) -> None:
+    """Handle keypresses and act accordingly.
 
+    Args:
+        cursor_pos (CursorPosition): cursor position object
+        key_event (pygame.event.Event): event object containing the key pressed
+    """
+    if key_event.key in (pygame.K_q, pygame.K_ESCAPE):
+        # Exit when user presses Q or ESC
+        finish()
 
-# calculate distance between two bodies
-def distance(bodyA, bodyB):
-    return ((bodyA.x - bodyB.x) ** 2 + (bodyA.y - bodyB.y) ** 2) ** 0.5
-
-
-# class for interactions between bodies
-class Interaction:
-
-    def __init__(self, bodyA, bodyB, k=30, color=(255, 255, 255)):
-        self.bodyA = bodyA
-        self.bodyB = bodyB
-
-        # initial direct distance between bodies
-        self.d = distance(bodyA, bodyB)
-
-        self.k = k
-
-        self.color = color
-
-    # hooke law
-    def update(self):
-
-        dx = self.bodyA.x - self.bodyB.x  # x difference between bodies
-        dy = self.bodyA.y - self.bodyB.y  # y difference between bodies
-
-        d = (dx**2 + dy**2) ** 0.5  # current direct distance between bodies
-        # self.d is the initial distance between bodies
-
-        F = self.k * (d - self.d) / d
-
-        self.bodyB.ax += F * dx / self.bodyB.m
-        self.bodyB.ay += F * dy / self.bodyB.m
-
-        self.bodyA.ax += -F * dx / self.bodyA.m
-        self.bodyA.ay += -F * dy / self.bodyA.m
-
-    def draw(self):
-        print("unimplemented function")
-        x1, y1 = to_pixel(self.bodyA.x, self.bodyA.y)
-        x2, y2 = to_pixel(self.bodyB.x, self.bodyB.y)
-
-        print("uninplemented function")
+    elif key_event.key == pygame.K_SPACE:
+        global SIMULATION_PAUSED
+        # toggle simulation pause
+        SIMULATION_PAUSED = not SIMULATION_PAUSED
+        print(f"Simulation {"paused" if SIMULATION_PAUSED else "resumed"}")
 
 
-class Body:
+def zoom_board(percent: float) -> None:
+    """Zoom board around the middle of the screen by a certain percentage.
 
-    def __init__(self, x, y, vx=0, vy=0, r=0.5, m=1.0, color=(255, 255, 255)):
-        self.x = x
-        self.y = y
+    Args:
+        percent (float): How much to zoom in/out, in %
+    """
+    # TODO make function work, probably move left first, then right
+    zoom_factor: float = percent / 100
+    # How much the world limits will change on each side in m
+    change: Vector = cursor_position.total_world_size * (zoom_factor) / 2
+    print(f"change in m: {change.dx:.2e} x {change.dy:.2e}")
+    cursor_position.world_limits += change
+    cursor_position.world_start -= change
 
-        self.vx = vx
-        self.vy = vy
+def handle_window_resize() -> None:
+    """Handle window resize events by updating the viewport and screen limits."""
+    old_limits = cursor_position.screen_limits
+    cursor_position.screen_limits = Vector(screen.get_width(), screen.get_height())
+    relative_change: Vector = cursor_position.screen_limits / old_limits
+    cursor_position.world_limits *= relative_change
+    print("UPDATED viewport: "
+            f"{cursor_position.world_limits.dx:.2e} x {cursor_position.world_limits.dy:.2e}")
 
-        self.ax = 0
-        self.ay = 0
+def finish() -> None:
+    """Quit the pygame application and terminate the program."""
+    pygame.quit()
+    sys.exit()
 
-        self.m = m
+bodies.append(
+    Body(
+        name="Aplha Centauri A",
+        pos=Vector(1.75e12, 1.5e12),
+        v=Vector(0, 0),
+        r=8.511e8,
+        m=2.188e30,
+        color=pygame.Color("#ffc300"),
+    )
+)
+bodies.append(
+    Body(
+        name="Alpha Centauri B",
+        pos=Vector(5.25e12, 3.5e12),
+        v=Vector(0, 0),
+        r=6.008e8,
+        m=1.804e30,
+        color=pygame.Color("#ffd95c"),
+    )
+)
 
-        self.r = r
+if not DEBUG:
+    # Set starting velocities so that the bodies have a stable orbit
+    DISTANCE = (bodies[0].pos - bodies[1].pos).magnitude
 
-        self.color = color
+    bodies[0].v.dy = (
+        (G * bodies[1].m) / DISTANCE * (bodies[0].m / (bodies[0].m + bodies[1].m))
+    ) ** 0.5
 
-    # perform euler cromer step
-    def update(self, dt):
+    bodies[1].v.dy = -(
+        ((G * bodies[0].m) / DISTANCE * (bodies[1].m / (bodies[0].m + bodies[1].m)))
+        ** 0.5
+    )
 
-        self.vx = self.ax * dt + self.vx
-        self.vy = self.ay * dt + self.vy
-
-        self.x = self.vx * dt + self.x
-        self.y = self.vy * dt + self.y
-
-    def clear(self):
-        self.ax = 0
-        self.ay = 0
-
-    # draw body on screen
-    def draw(self):
-        print("unimplemented")
-        x, y = to_pixel(self.x, self.y)
-        r_x, r_y = to_pixel(self.x + self.r, self.y + self.r)
-
-        print("unimplemented")
+    interactions.append(Interaction(bodies[0], bodies[1], pygame.Color("#ff0000")))
 
 
-while running:
+while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:  # X clicked at top of window
-            running = False
+            finish()
 
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_q:
-                print("q key pressed, exiting...")
-                running = False
+        elif event.type == pygame.KEYDOWN:  # Key pressed
+            print(f"{"-" * 5} new keypress {"-" * 5} {event.unicode} ({event.key})")
+            # Handle keypresses which might stop the simulation
+            handle_keypress(event)
+
+        elif event.type == pygame.WINDOWSIZECHANGED:  # Window resize
+            handle_window_resize()
 
     # Clear screen to black
-    screen.fill("purple")
+    screen.fill("black")
 
-    # RENDER YOUR GAME HERE
+    for body in bodies:
+        # Draw bodies even if simulation is paused to enable zooming when paused
+        body.draw(screen)
 
-    # flip() the display to put your work on screen
+    if SIMULATION_PAUSED:
+        # skip continuing with the simulation
+        continue
+
+    # Update locations, velocities, etc.
+    for interaction in interactions:
+        interaction.update()
+
+    # Update bodies for next frame
+    for body in bodies:
+        body.update(TIMESTEP)
+
+    if DEBUG:
+        # debug functionality here, not used at the moment
+        pass
+
+    # refresh the screen
     pygame.display.flip()
-
+    # maintain frame rate
     clock.tick(FPS)
-
-pygame.quit()
