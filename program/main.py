@@ -2,25 +2,21 @@
 
 import sys
 import pygame
-from config import FPS, TIMESTEP, START_SCREEN_SIZE, G
-from objects import Vector, Body, Interaction, CursorPosition
+from config import FPS, TIMESTEP, START_SCREEN_SIZE, G, START_WORLD_SIZE
+from objects import Vector, Body, Interaction, WorldParams
 
-# TODO: write unit tests for to_pixel, because I'm not sure it works properly
-
-DEBUG: bool = False
+DEBUG: bool = True
 SIMULATION_PAUSED: bool = False
-
 
 # TODO remove this when done
 def show_viewport() -> None:
     """Print the current viewport and screen limits to the console."""
-    print(f"top right: {cursor_position.world_limits.dx:.2e} x {cursor_position.world_limits.dy:.2e}")
-    print(f"bottom left: {cursor_position.world_start.dx:.2e} x {cursor_position.world_start.dy:.2e}")
+    print(f"top right: {world_params.world_limits.dx:.2e} x {world_params.world_limits.dy:.2e}")
+    print(f"bottom left: {world_params.world_start.dx:.2e} x {world_params.world_start.dy:.2e}")
     print()
 
-pygame.init()  # Initialize pygame
-
 # Initialize pygame-related stuff
+pygame.init()
 screen: pygame.Surface = pygame.display.set_mode(START_SCREEN_SIZE, pygame.RESIZABLE)
 clock: pygame.time.Clock = pygame.time.Clock()  # Clock to manage frame rate
 
@@ -29,10 +25,11 @@ bodies: list[Body] = []
 interactions: list[Interaction] = []
 
 # Viewport and screen sizes for scaling
-cursor_position: CursorPosition = CursorPosition(
-    Vector(screen.get_width(), screen.get_height()), Vector(7e12, 7e12)
+world_params: WorldParams = WorldParams(
+    Vector(screen.get_width(), screen.get_height()), Vector(*(START_WORLD_SIZE))
 )
 
+# TODO: write unit tests for to_pixel, because I'm not sure it works properly
 def to_pixel(pos: Vector) -> Vector:
     """Return the coordinates as a Vector of px values, generated from the metric Vector as input.
 
@@ -42,13 +39,13 @@ def to_pixel(pos: Vector) -> Vector:
     Returns:
         Vector: coordinates in px
     """
-    relative_positions: Vector = pos / cursor_position.world_limits
-    result = Vector(relative_positions.dx, 1 - relative_positions.dy) * cursor_position.screen_limits
+    relative_positions: Vector = pos / world_params.world_limits
+    result = Vector(relative_positions.dx, relative_positions.dy) * world_params.screen_size
 
     return result
 
 def handle_keypress(key_event: pygame.event.Event) -> None:
-    """Handle keypresses and act accordingly.
+    """Handle keypresses and act accordingly. Assumes that the passed event has a `key` attribute.
 
     Args:
         cursor_pos (CursorPosition): cursor position object
@@ -64,29 +61,20 @@ def handle_keypress(key_event: pygame.event.Event) -> None:
         SIMULATION_PAUSED = not SIMULATION_PAUSED
         print(f"Simulation {"paused" if SIMULATION_PAUSED else "resumed"}")
 
-
-def zoom_board(percent: float) -> None:
-    """Zoom board around the middle of the screen by a certain percentage.
-
-    Args:
-        percent (float): How much to zoom in/out, in %
-    """
-    # TODO make function work, probably move left first, then right
-    zoom_factor: float = percent / 100
-    # How much the world limits will change on each side in m
-    change: Vector = cursor_position.total_world_size * (zoom_factor) / 2
-    print(f"change in m: {change.dx:.2e} x {change.dy:.2e}")
-    cursor_position.world_limits += change
-    cursor_position.world_start -= change
-
 def handle_window_resize() -> None:
     """Handle window resize events by updating the viewport and screen limits."""
-    old_limits = cursor_position.screen_limits
-    cursor_position.screen_limits = Vector(screen.get_width(), screen.get_height())
-    relative_change: Vector = cursor_position.screen_limits / old_limits
-    cursor_position.world_limits *= relative_change
+    old_limits = world_params.screen_size
+    world_params.screen_size = Vector(screen.get_width(), screen.get_height())
+    relative_change: Vector = world_params.screen_size / old_limits
+    world_params.world_limits *= relative_change
     print("UPDATED viewport: "
-            f"{cursor_position.world_limits.dx:.2e} x {cursor_position.world_limits.dy:.2e}")
+            f"{world_params.world_limits.dx:.2e} x {world_params.world_limits.dy:.2e}")
+
+# TODO working on this
+def handle_world_zoom() -> None:
+    # Get the outermost bodies in each direction and adjust world limits accordingly
+    world_params.world_limits = world_params.world_limits + Vector(max(bodies, key=lambda body: body.pos.dx).pos.dx, max(bodies, key=lambda body: body.pos.dy).pos.dy)
+    world_params.world_start = world_params.world_start - Vector(min(bodies, key=lambda body: body.pos.dx).pos.dx, min(bodies, key=lambda body: body.pos.dy).pos.dy)
 
 def finish() -> None:
     """Quit the pygame application and terminate the program."""
@@ -100,7 +88,7 @@ bodies.append(
         v=Vector(0, 0),
         r=8.511e8,
         m=2.188e30,
-        color=pygame.Color("#ffc300"),
+        color=pygame.Color("#ffffff"), # ffc300
     )
 )
 bodies.append(
@@ -118,7 +106,7 @@ if not DEBUG:
     # Set starting velocities so that the bodies have a stable orbit
     DISTANCE = (bodies[0].pos - bodies[1].pos).magnitude
 
-    bodies[0].v.dy = (
+    bodies[0].v.dx = (
         (G * bodies[1].m) / DISTANCE * (bodies[0].m / (bodies[0].m + bodies[1].m))
     ) ** 0.5
 
@@ -136,7 +124,6 @@ while True:
             finish()
 
         elif event.type == pygame.KEYDOWN:  # Key pressed
-            print(f"{"-" * 5} new keypress {"-" * 5} {event.unicode} ({event.key})")
             # Handle keypresses which might stop the simulation
             handle_keypress(event)
 

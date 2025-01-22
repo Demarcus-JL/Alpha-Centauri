@@ -308,9 +308,9 @@ class Interaction:
         print("unimplemented Interaction.draw() function")
 
 
-class CursorPosition:
-    """Class to get cursor position in the simulation"""
-    def __init__(self, screen_limits: Vector, world_limits: Vector) -> None:
+class WorldParams:
+    """Class to manage size-related world data in the simulation"""
+    def __init__(self, screen_size: Vector, world_limits: Vector) -> None:
         """Class to get cursor position in the simulation.
 
         Properties for metric versions and absolute px values are provided.
@@ -326,7 +326,7 @@ class CursorPosition:
         self._x: int = 0
         self._y: int = 0
 
-        self.screen_limits: Vector = screen_limits
+        self.screen_size: Vector = screen_size
         self.world_limits: Vector = world_limits
         self.world_start: Vector = Vector(0, 0)
 
@@ -337,7 +337,7 @@ class CursorPosition:
         Returns:
             Vector: position vector of the cursor
         """
-        return self.pixel / self.screen_limits * self.world_limits
+        return self.pixel / self.screen_size * self.world_limits
 
     @property
     def metric_inverted(self) -> Vector:
@@ -364,7 +364,7 @@ class CursorPosition:
         Returns:
             Vector: position vector of the cursor
         """
-        return self.screen_limits - self.pixel
+        return self.screen_size - self.pixel
 
     @property
     def total_world_size(self) -> Vector:
@@ -374,13 +374,3 @@ class CursorPosition:
             Vector: total world size
         """
         return self.world_limits - self.world_start
-
-    def update(self, new_x: int, new_y: int) -> None:
-        """Update the cursor position
-
-        Args:
-            new_x (int): new x position value in px
-            new_y (int): new y position value in px
-        """
-        self._x = new_x
-        self._y = new_y
