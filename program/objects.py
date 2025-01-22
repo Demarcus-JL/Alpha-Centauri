@@ -70,6 +70,15 @@ class Vector(Sequence):
         """Define iterable behaviour of the vector so it can be treated and unpacked like a tuple"""
         return iter((self.dx, self.dy))
 
+    def __hash__(self):
+        return hash((self.dx, self.dy))
+
+    def __eq__(self, value):
+        if not isinstance(value, Vector):
+            raise TypeError("Cannot compare Vectors with non-Vector types")
+
+        return self.dx == value.dx and self.dy == value.dy
+
     def __add__(self, obj: Vector) -> Vector:
         """Dunder method for adding two vectors
 
@@ -95,7 +104,7 @@ class Vector(Sequence):
     def __mul__(self, k: Any[float, int, Vector]) -> Vector:
         """Dunder method for multiplying a Vector
 
-        If the supplied factor is a float, simple scalar division will take place.
+        If the supplied factor is a float, simple scalar multiplication will take place.
         If the supplied factor is another Vector, a Vector with the individual components
         multiplied among each other will be returned.
 
