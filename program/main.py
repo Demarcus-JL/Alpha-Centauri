@@ -5,8 +5,7 @@ import pygame
 from config import FPS, TIMESTEP, START_SCREEN_SIZE, G, START_WORLD_SIZE
 from objects import Vector, Body, Interaction, WorldParams
 
-DEBUG: bool = True
-SIMULATION_PAUSED: bool = False
+DEBUG: bool = False
 
 # TODO remove this when done
 def show_viewport() -> None:
@@ -15,21 +14,6 @@ def show_viewport() -> None:
     print(f"bottom left: {world_params.world_start.dx:.2e} x {world_params.world_start.dy:.2e}")
     print()
 
-# Initialize pygame-related stuff
-pygame.init()
-screen: pygame.Surface = pygame.display.set_mode(START_SCREEN_SIZE, pygame.RESIZABLE)
-clock: pygame.time.Clock = pygame.time.Clock()  # Clock to manage frame rate
-
-# Data structures for simulation
-bodies: list[Body] = []
-interactions: list[Interaction] = []
-
-# Viewport and screen sizes for scaling
-world_params: WorldParams = WorldParams(
-    Vector(screen.get_width(), screen.get_height()), Vector(*(START_WORLD_SIZE))
-)
-
-# TODO: write unit tests for to_pixel, because I'm not sure it works properly
 def to_pixel(pos: Vector) -> Vector:
     """Return the coordinates as a Vector of px values, generated from the metric Vector as input.
 
@@ -81,6 +65,25 @@ def finish() -> None:
     pygame.quit()
     sys.exit()
 
+
+# Pygame-related stuff
+pygame.init()
+screen: pygame.Surface = pygame.display.set_mode(START_SCREEN_SIZE, pygame.RESIZABLE)
+clock: pygame.time.Clock = pygame.time.Clock()  # Clock to manage frame rate
+
+# Initialize data structures for simulation
+bodies: list[Body] = []
+interactions: list[Interaction] = []
+
+# Simulation state
+SIMULATION_PAUSED: bool = False
+
+# Viewport and screen sizes for scaling
+world_params: WorldParams = WorldParams(
+    Vector(screen.get_width(), screen.get_height()), Vector(*(START_WORLD_SIZE))
+)
+
+# Add stars to the simulation
 bodies.append(
     Body(
         name="Aplha Centauri A",
@@ -102,6 +105,8 @@ bodies.append(
     )
 )
 
+# Set interaction parametres for bodies
+# TODO Remove debug check for production
 if not DEBUG:
     # Set starting velocities so that the bodies have a stable orbit
     DISTANCE = (bodies[0].pos - bodies[1].pos).magnitude
@@ -117,14 +122,12 @@ if not DEBUG:
 
     interactions.append(Interaction(bodies[0], bodies[1], pygame.Color("#ff0000")))
 
-
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:  # X clicked at top of window
             finish()
 
         elif event.type == pygame.KEYDOWN:  # Key pressed
-            # Handle keypresses which might stop the simulation
             handle_keypress(event)
 
         elif event.type == pygame.WINDOWSIZECHANGED:  # Window resize
@@ -138,7 +141,7 @@ while True:
         body.draw(screen)
 
     if SIMULATION_PAUSED:
-        # skip continuing with the simulation
+        # Don't update anything if simulation is paused
         continue
 
     # Update locations, velocities, etc.
@@ -148,10 +151,6 @@ while True:
     # Update bodies for next frame
     for body in bodies:
         body.update(TIMESTEP)
-
-    if DEBUG:
-        # debug functionality here, not used at the moment
-        pass
 
     # refresh the screen
     pygame.display.flip()
