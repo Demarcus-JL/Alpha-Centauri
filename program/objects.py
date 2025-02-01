@@ -349,7 +349,7 @@ class Interaction:
 
     def follow_bodies(self, world_params: WorldParams) -> WorldParams:
         for body in self.bodies:
-            shift = (body.v * SCALE_FACTOR**6 * 50 / world_params.total_world_size)
+            shift = (body.v * SCALE_FACTOR**6 * 50 / world_params.total_world_size)  # TODO find better v-dependent formula
             if world_params.world_limits.dy - body.pos.dy < world_params.total_world_size.dy * 0.1:
                 print(f"{body.name} moved the viewport down by {shift.dy} with speed {body.v}")
                 # Move the viewport down to keep bodies in view
@@ -386,6 +386,19 @@ class WorldParams:
         self.screen_size: Vector = screen_size
         self.world_limits: Vector = world_limits
         self.world_start: Vector = world_start
+
+    def __eq__(self, value: WorldParams) -> bool:
+        """Equality check for world parametres. Only returns True if all params are the same
+
+        Args:
+            value (WorldParams): The WorldParams instance to be checked against
+
+        Returns:
+            bool: If both instances have the same values
+        """
+        if not isinstance(value, WorldParams):
+            raise TypeError(f"Cannot compare WorldParams with {type(value)} type")
+        return (self.world_limits, self.world_start) == (value.world_limits, value.world_start)
 
     @property
     def total_world_size(self) -> Vector:
