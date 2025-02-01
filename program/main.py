@@ -44,8 +44,13 @@ def handle_window_resize() -> None:
 
 
 def finish() -> None:
-    """Quit the pygame application and terminate the program."""
-    print(f"{round(years_passed, 2)} years have been simulated")
+    """Quit the pygame application and terminate the program.
+    
+    Also displays the amount of equivalent earth years that have been simulated since the beginning.
+    """
+    # 31'556'952 seconds in a year, accounting for leap years
+    # Replace "," delimiter with "'" to adapt to european way of writing
+    print(f"\nCirca {f"{round(rounds * TIMESTEP / 31_556_952):,}".replace(",", "'")} earth years have been simulated.")
     pygame.quit()
     sys_exit(0)
 
@@ -54,7 +59,9 @@ def finish() -> None:
 pygame.init()
 screen: pygame.Surface = pygame.display.set_mode(START_SCREEN_SIZE, pygame.RESIZABLE)
 clock: pygame.time.Clock = pygame.time.Clock()  # Clock to manage frame rate
-pygame.display.set_caption("Alpha Centauri")  # TODO add icon
+pygame.display.set_caption("Alpha Centauri")
+icon = pygame.image.load("../thumbnail.png")
+pygame.display.set_icon(icon)
 
 # Initialize data structures for simulation
 bodies: list[Body] = []
@@ -62,7 +69,7 @@ interactions: list[Interaction] = []
 
 # Simulation state
 SIMULATION_PAUSED: bool = False
-years_passed: float = 0  # To display passed time at the end
+rounds: int = 0  # To display passed time at the end
 
 
 # Viewport and screen sizes for scaling
@@ -147,5 +154,5 @@ if __name__ == "__main__":
         # refresh the screen
         pygame.display.flip()
         # maintain frame rate
-        years_passed += TIMESTEP / 31_556_952
+        rounds += 1
         clock.tick(FPS)
