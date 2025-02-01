@@ -19,10 +19,6 @@ from math import atan2, cos, sin, ceil
 from pygame import Color
 from config import G, SCALE_FACTOR
 
-# TODO remove this function
-def show_params(world_params: WorldParams) -> None:
-    print(f"world params:\n\ttotal size: {world_params.total_world_size}\n\tstart: {world_params.world_start}\n\tlimits: {world_params.world_limits}")
-
 
 def to_pixel(pos: Vector, world_params: WorldParams) -> Vector:
     """Return the coordinates as a Vector of px values, generated from the metric Vector as input.
@@ -49,7 +45,7 @@ def draw_grid(screen: pygame.Surface, world_params: WorldParams, box_size: Vecto
 
             pygame.draw.rect(
                 screen,
-                pygame.Color("#ffffff"),
+                pygame.Color("#7f7f7f"),
                 pygame.Rect(top_left, size),
                 1,
             )
@@ -371,7 +367,6 @@ class Interaction:
             WorldParams: world parametres after the adjustment
         """
         for body in self.bodies:
-            # shift = (body.v * SCALE_FACTOR**6 * 50 / world_params.total_world_size)  # TODO find better v-dependent formula
             shift = abs(body.v) * world_params.total_world_size / 1000000
             if world_params.world_limits.dy - body.pos.dy < world_params.total_world_size.dy * 0.1:
                 # Move the viewport down to keep bodies in view
