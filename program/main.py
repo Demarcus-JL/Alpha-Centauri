@@ -25,7 +25,6 @@ def handle_keypress(key_event: pygame.event.Event) -> None:
 
     elif key_event.key == pygame.K_DOWN:
         FPS = max(FPS - 5, 1)
-        print("FPS:", FPS)
     elif key_event.key == pygame.K_UP:
         FPS += 5
         print("FPS:", FPS)
