@@ -19,6 +19,26 @@ from math import atan2, cos, sin
 from pygame import Color
 from config import G, SCALE_FACTOR
 
+# TODO remove this function
+def show_params(world_params: WorldParams) -> None:
+    print(f"world params:\n\ttotal size: {world_params.total_world_size}\n\tstart: {world_params.world_start}\n\tlimits: {world_params.world_limits}")
+
+
+def to_pixel(pos: Vector, world_params: WorldParams) -> Vector:
+    """Return the coordinates as a Vector of px values, generated from the metric Vector as input.
+
+    Args:
+        pos (Vector): coordinates in m
+
+    Returns:
+        Vector: coordinates in px
+    """
+    relative_positions: Vector = pos / world_params.total_world_size
+    relative_start: Vector = -(world_params.world_start / world_params.total_world_size)
+    result = (relative_start + relative_positions) * world_params.screen_size
+
+    return result
+
 
 class Vector(Sequence):
     """Vector class to make the calculation of speeds and positions easier"""
@@ -161,6 +181,28 @@ class Vector(Sequence):
         """
         return Vector(-self.dx, -self.dy)
 
+    def __lt__(self, obj: Vector) -> bool:
+        """Less-than operator for vectors
+
+        Args:
+            obj (Vector): Vector to be compared to
+
+        Returns:
+            bool: result of the operation
+        """
+        return self.magnitude < obj.magnitude
+
+    def __gt__(self, obj: Vector) -> bool:
+        """Greater-than operator for vectors
+
+        Args:
+            obj (Vector): Vector to be compared to
+
+        Returns:
+            bool: result of the operation
+        """
+        return self.magnitude > obj.magnitude
+
     @property
     def magnitude(self) -> float:
         """Current magnitude of the vector
@@ -234,24 +276,19 @@ class Body:
         self.pos += self.v * dt
         self.v = self.a * dt + self.v
 
-    def draw(self, screen: pygame.Surface) -> None:
+    def draw(self, screen: pygame.Surface, world_params: WorldParams) -> None:
         """Draw the body on the screen
 
         Args:
             screen (Surface): pygame screen object to draw on
             cursor_pos (CursorPosition): cursor position object
         """
-        from main import to_pixel  # Avoid circular import by importing here
         pygame.draw.circle(
             screen,
             self.color,
-            to_pixel(self.pos),
-            to_pixel(Vector(self.r * SCALE_FACTOR, 0)).dx,
+            to_pixel(self.pos, world_params),
+            to_pixel(Vector(self.r * SCALE_FACTOR, 0), world_params).dx,
         )
-
-    def clear_accel(self) -> None:
-        """Reset the acceleration of the body"""
-        self.a = Vector(0, 0)
 
 
 class Interaction:
@@ -261,7 +298,6 @@ class Interaction:
         self,
         obj1: Body,
         obj2: Body,
-        color: Color = Color("#ffffff"),
     ) -> None:
         """Class to manage interactions between two Body objects
 
@@ -273,11 +309,10 @@ class Interaction:
         """
         self.body1 = obj1
         self.body2 = obj2
+        self.bodies = (self.body1, self.body2)
 
         # Initial direct distance between bodies
         self.initial_distance: float = (self.body1.pos - self.body2.pos).magnitude
-
-        self.color = color
 
     @property
     def current_distance(self) -> float:
@@ -296,6 +331,7 @@ class Interaction:
         Args:
             dt (float): timestep since last calculation
         """
+        return  # TODO remove this line
         # Get the magnitude of the acting force
         force_magnitude: float = G * (self.body1.m * self.body2.m) / self.current_distance**2
         # Difference in positions, defined in a vector
@@ -311,69 +347,45 @@ class Interaction:
         self.body1.a = -directed_force / self.body1.m
         self.body2.a = directed_force / self.body2.m
 
+    def follow_bodies(self, world_params: WorldParams) -> WorldParams:
+        for body in self.bodies:
+            shift = (body.v * SCALE_FACTOR**6 * 50 / world_params.total_world_size)
+            if world_params.world_limits.dy - body.pos.dy < world_params.total_world_size.dy * 0.1:
+                print(f"{body.name} moved the viewport down by {shift.dy} with speed {body.v}")
+                # Move the viewport down to keep bodies in view
+                world_params.world_limits.dy += shift.dy
+                world_params.world_start.dy += shift.dy
+            elif world_params.world_limits.dy - body.pos.dy > world_params.total_world_size.dy * 0.9:
+                print(f"{body.name} moved the viewport up by {shift.dy}")
+                # Move the viewport up to keep bodies in view
+                world_params.world_limits.dy -= shift.dy
+                world_params.world_start.dy -= shift.dy
 
-    def draw(self):
-        """Draw the interaction around the bodies"""
-        print("unimplemented Interaction.draw() function")
+            if world_params.world_limits.dx - body.pos.dx < world_params.total_world_size.dx * 0.1:
+                print(f"{body.name} moved the viewport right by {shift.dx}")
+                world_params.world_limits.dx += shift.dx
+                world_params.world_start.dx += shift.dx
+            elif world_params.world_limits.dx - body.pos.dx > world_params.total_world_size.dx * 0.9:
+                print(f"{body.name} moved the viewport left by {shift.dx}")
+                world_params.world_limits.dx -= shift.dx
+                world_params.world_start.dx -= shift.dx
+
+        return world_params
 
 
 class WorldParams:
     """Class to manage size-related world data in the simulation"""
-    def __init__(self, screen_size: Vector, world_limits: Vector) -> None:
-        """Class to get cursor position in the simulation.
-
-        Properties for metric versions and absolute px values are provided.
-        Arguemts are Call by Object References, because Vector classes are mutable.
-        Therefore, updates to the screen_limits and world_limits made in main.py will reflect here
-        as well.
+    def __init__(self, screen_size: Vector, world_limits: Vector, world_start: Vector = Vector(0, 0)) -> None:
+        """Class that holds world-sizing-related values for the simulation.
 
         Args:
-            screen_limits (Vector): variable that always holds the current screen limits (px)
+            screen_size (Vector): variable that always holds the current screen size (px)
             world_limits (Vector): variable that always holds the current world limits (m)
+            world_start (Vector, optional): variable that always holds the current world start (m). Defaults to Vector(0, 0).
         """
-        # Actual coordinates should never be accessed or modified directly
-        self._x: int = 0
-        self._y: int = 0
-
         self.screen_size: Vector = screen_size
         self.world_limits: Vector = world_limits
-        self.world_start: Vector = Vector(0, 0)
-
-    @property
-    def metric(self) -> Vector:
-        """Get the current cursor position in m
-
-        Returns:
-            Vector: position vector of the cursor
-        """
-        return self.pixel / self.screen_size * self.world_limits
-
-    @property
-    def metric_inverted(self) -> Vector:
-        """Get the current cursor position in m, but from the other side
-
-        Returns:
-            Vector: position vector of the cursor
-        """
-        return -(self.world_limits - self.metric)
-
-    @property
-    def pixel(self) -> Vector:
-        """Get the current cursor position in pixel
-
-        Returns:
-            Vector: position vector of the cursor
-        """
-        return Vector(self._x, self._y)
-
-    @property
-    def pixel_inverted(self) -> Vector:
-        """Get the current cursor position in pixel, but from the other side
-
-        Returns:
-            Vector: position vector of the cursor
-        """
-        return self.screen_size - self.pixel
+        self.world_start: Vector = world_start
 
     @property
     def total_world_size(self) -> Vector:
