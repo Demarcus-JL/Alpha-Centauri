@@ -3,7 +3,7 @@
 from sys import exit as sys_exit
 import pygame
 from config import FPS, TIMESTEP, START_SCREEN_SIZE, G, START_WORLD_SIZE, PERFECT_ORBIT
-from objects import Vector, Body, Interaction, WorldParams
+from objects import Vector, Body, Interaction, WorldParams, draw_grid
 
 
 def handle_keypress(key_event: pygame.event.Event) -> None:
@@ -45,6 +45,7 @@ def handle_window_resize() -> None:
 
 def finish() -> None:
     """Quit the pygame application and terminate the program."""
+    print(f"{round(years_passed, 2)} years have been simulated")
     pygame.quit()
     sys_exit(0)
 
@@ -61,6 +62,8 @@ interactions: list[Interaction] = []
 
 # Simulation state
 SIMULATION_PAUSED: bool = False
+years_passed: float = 0  # To display passed time at the end
+
 
 # Viewport and screen sizes for scaling
 world_params: WorldParams = WorldParams(
@@ -123,6 +126,7 @@ if __name__ == "__main__":
 
         # Clear screen to black
         screen.fill("black")
+        draw_grid(screen, world_params, Vector(*START_WORLD_SIZE) / 10)
 
         if SIMULATION_PAUSED:
             # Don't update anything if simulation is paused
@@ -143,4 +147,5 @@ if __name__ == "__main__":
         # refresh the screen
         pygame.display.flip()
         # maintain frame rate
+        years_passed += TIMESTEP / 31_556_952
         clock.tick(FPS)

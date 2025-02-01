@@ -15,7 +15,7 @@ import pygame
 # To make Vector class work like a python iterable
 from collections.abc import Sequence
 # Imports for program logic
-from math import atan2, cos, sin
+from math import atan2, cos, sin, ceil
 from pygame import Color
 from config import G, SCALE_FACTOR
 
@@ -38,6 +38,21 @@ def to_pixel(pos: Vector, world_params: WorldParams) -> Vector:
     result = (relative_start + relative_positions) * world_params.screen_size
 
     return result
+
+
+def draw_grid(screen: pygame.Surface, world_params: WorldParams, box_size: Vector) -> None:
+    num_lines: Vector = world_params.total_world_size / box_size
+    for x in range(ceil(num_lines.dx)):
+        for y in range(ceil(num_lines.dy)):
+            top_left = to_pixel(Vector(box_size.dx * x, box_size.dy * y), world_params)
+            size = to_pixel(box_size, world_params)
+
+            pygame.draw.rect(
+                screen,
+                pygame.Color("#ffffff"),
+                pygame.Rect(top_left, size),
+                1,
+            )
 
 
 class Vector(Sequence):
@@ -331,7 +346,6 @@ class Interaction:
         Args:
             dt (float): timestep since last calculation
         """
-        return  # TODO remove this line
         # Get the magnitude of the acting force
         force_magnitude: float = G * (self.body1.m * self.body2.m) / self.current_distance**2
         # Difference in positions, defined in a vector
@@ -348,28 +362,32 @@ class Interaction:
         self.body2.a = directed_force / self.body2.m
 
     def follow_bodies(self, world_params: WorldParams) -> WorldParams:
+        """Adjust the world parameters so that the bodies are kept in view
+
+        Args:
+            world_params (WorldParams): world parameters before the adjustment
+
+        Returns:
+            WorldParams: world parametres after the adjustment
+        """
         for body in self.bodies:
-            shift = (body.v * SCALE_FACTOR**6 * 50 / world_params.total_world_size)  # TODO find better v-dependent formula
+            # shift = (body.v * SCALE_FACTOR**6 * 50 / world_params.total_world_size)  # TODO find better v-dependent formula
+            shift = abs(body.v) * world_params.total_world_size / 1000000
             if world_params.world_limits.dy - body.pos.dy < world_params.total_world_size.dy * 0.1:
-                print(f"{body.name} moved the viewport down by {shift.dy:.2e}")
                 # Move the viewport down to keep bodies in view
                 world_params.world_limits.dy += shift.dy
-                world_params.world_start.dy += shift.dy
+                # world_params.world_start.dy += shift.dy
             elif world_params.world_limits.dy - body.pos.dy > world_params.total_world_size.dy * 0.9:
-                print(f"{body.name} moved the viewport up by {shift.dy:.2e}")
                 # Move the viewport up to keep bodies in view
                 world_params.world_limits.dy -= shift.dy
-                world_params.world_start.dy -= shift.dy
+                # world_params.world_start.dy -= shift.dy
 
             if world_params.world_limits.dx - body.pos.dx < world_params.total_world_size.dx * 0.1:
-                print(f"{body.name} moved the viewport right by {shift.dx:.2e}")
                 world_params.world_limits.dx += shift.dx
-                world_params.world_start.dx += shift.dx
+                # world_params.world_start.dx -= shift.dx
             elif world_params.world_limits.dx - body.pos.dx > world_params.total_world_size.dx * 0.9:
-                print(f"{body.name} moved the viewport left by {shift.dx:.2e}")
                 world_params.world_limits.dx -= shift.dx
-                world_params.world_start.dx -= shift.dx
-
+                # world_params.world_start.dx += shift.dx
         return world_params
 
 
