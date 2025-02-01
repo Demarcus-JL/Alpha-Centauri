@@ -1,32 +1,10 @@
-"""Module docsting here"""
+"""Main progam logic including event loop and key handlers for pygame."""
 
-import sys
+from sys import exit as sys_exit
 import pygame
-from config import FPS, TIMESTEP, START_SCREEN_SIZE, G, START_WORLD_SIZE
+from config import FPS, TIMESTEP, START_SCREEN_SIZE, G, START_WORLD_SIZE, PERFECT_ORBIT
 from objects import Vector, Body, Interaction, WorldParams
 
-DEBUG: bool = False
-
-# TODO remove this when done
-def show_viewport() -> None:
-    """Print the current viewport and screen limits to the console."""
-    print(f"top right: {world_params.world_limits.dx:.2e} x {world_params.world_limits.dy:.2e}")
-    print(f"bottom left: {world_params.world_start.dx:.2e} x {world_params.world_start.dy:.2e}")
-    print()
-
-def to_pixel(pos: Vector) -> Vector:
-    """Return the coordinates as a Vector of px values, generated from the metric Vector as input.
-
-    Args:
-        pos (Vector): coordinates in m
-
-    Returns:
-        Vector: coordinates in px
-    """
-    relative_positions: Vector = pos / world_params.world_limits
-    result = Vector(relative_positions.dx, relative_positions.dy) * world_params.screen_size
-
-    return result
 
 def handle_keypress(key_event: pygame.event.Event) -> None:
     """Handle keypresses and act accordingly. Assumes that the passed event has a `key` attribute.
@@ -35,6 +13,7 @@ def handle_keypress(key_event: pygame.event.Event) -> None:
         cursor_pos (CursorPosition): cursor position object
         key_event (pygame.event.Event): event object containing the key pressed
     """
+    global FPS
     if key_event.key in (pygame.K_q, pygame.K_ESCAPE):
         # Exit when user presses Q or ESC
         finish()
@@ -43,33 +22,38 @@ def handle_keypress(key_event: pygame.event.Event) -> None:
         global SIMULATION_PAUSED
         # toggle simulation pause
         SIMULATION_PAUSED = not SIMULATION_PAUSED
-        print(f"Simulation {"paused" if SIMULATION_PAUSED else "resumed"}")
+
+    elif key_event.key == pygame.K_DOWN:
+        FPS = max(FPS - 5, 1)
+        print("FPS:", FPS)
+    elif key_event.key == pygame.K_UP:
+        FPS += 5
+        print("FPS:", FPS)
+
+    elif key_event.key == pygame.K_f:
+        # Enter fullscreen
+        pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+
 
 def handle_window_resize() -> None:
     """Handle window resize events by updating the viewport and screen limits."""
-    old_limits = world_params.screen_size
+    old_limits: Vector = world_params.screen_size
     world_params.screen_size = Vector(screen.get_width(), screen.get_height())
     relative_change: Vector = world_params.screen_size / old_limits
     world_params.world_limits *= relative_change
-    print("UPDATED viewport: "
-            f"{world_params.world_limits.dx:.2e} x {world_params.world_limits.dy:.2e}")
 
-# TODO working on this
-def handle_world_zoom() -> None:
-    # Get the outermost bodies in each direction and adjust world limits accordingly
-    world_params.world_limits = world_params.world_limits + Vector(max(bodies, key=lambda body: body.pos.dx).pos.dx, max(bodies, key=lambda body: body.pos.dy).pos.dy)
-    world_params.world_start = world_params.world_start - Vector(min(bodies, key=lambda body: body.pos.dx).pos.dx, min(bodies, key=lambda body: body.pos.dy).pos.dy)
 
 def finish() -> None:
     """Quit the pygame application and terminate the program."""
     pygame.quit()
-    sys.exit()
+    sys_exit(0)
 
 
 # Pygame-related stuff
 pygame.init()
 screen: pygame.Surface = pygame.display.set_mode(START_SCREEN_SIZE, pygame.RESIZABLE)
 clock: pygame.time.Clock = pygame.time.Clock()  # Clock to manage frame rate
+pygame.display.set_caption("Alpha Centauri")  # TODO add icon
 
 # Initialize data structures for simulation
 bodies: list[Body] = []
@@ -80,79 +64,83 @@ SIMULATION_PAUSED: bool = False
 
 # Viewport and screen sizes for scaling
 world_params: WorldParams = WorldParams(
-    Vector(screen.get_width(), screen.get_height()), Vector(*(START_WORLD_SIZE))
+    Vector(screen.get_width(), screen.get_height()),
+    Vector(*(START_WORLD_SIZE)),
 )
 
-# Add stars to the simulation
-bodies.append(
-    Body(
-        name="Aplha Centauri A",
-        pos=Vector(1.75e12, 1.5e12),
-        v=Vector(0, 0),
-        r=8.511e8,
-        m=2.188e30,
-        color=pygame.Color("#ffffff"), # ffc300
+if __name__ == "__main__":
+    # Add stars to the simulation
+    bodies.append(
+        Body(
+            name="Alpha Centauri A",
+            pos=Vector(
+                1.75e13, 3.5e13
+            ),
+            v=Vector(0, 0),
+            r=8.511e8,
+            m=2.188e30,
+            color=pygame.Color("#ffffff"),  # f9ff86
+        )
     )
-)
-bodies.append(
-    Body(
-        name="Alpha Centauri B",
-        pos=Vector(5.25e12, 3.5e12),
-        v=Vector(0, 0),
-        r=6.008e8,
-        m=1.804e30,
-        color=pygame.Color("#ffd95c"),
-    )
-)
-
-# Set interaction parametres for bodies
-# TODO Remove debug check for production
-if not DEBUG:
-    # Set starting velocities so that the bodies have a stable orbit
-    DISTANCE = (bodies[0].pos - bodies[1].pos).magnitude
-
-    bodies[0].v.dx = (
-        (G * bodies[1].m) / DISTANCE * (bodies[0].m / (bodies[0].m + bodies[1].m))
-    ) ** 0.5
-
-    bodies[1].v.dy = -(
-        ((G * bodies[0].m) / DISTANCE * (bodies[1].m / (bodies[0].m + bodies[1].m)))
-        ** 0.5
+    bodies.append(
+        Body(
+            name="Alpha Centauri B",
+            pos=Vector(
+                5.25e13, 3.5e13
+            ),
+            v=Vector(0, 0),
+            r=6.008e8,
+            m=1.804e30,
+            color=pygame.Color("#e3b213"),
+        )
     )
 
-    interactions.append(Interaction(bodies[0], bodies[1], pygame.Color("#ff0000")))
+    if PERFECT_ORBIT:
+        # Set starting velocities so that the bodies have a stable orbit
+        DISTANCE = (bodies[0].pos - bodies[1].pos).magnitude
 
-while True:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:  # X clicked at top of window
-            finish()
+        bodies[0].v.dy = (
+            (G * bodies[1].m) / DISTANCE * (bodies[0].m / (bodies[0].m + bodies[1].m))
+        ) ** 0.5
 
-        elif event.type == pygame.KEYDOWN:  # Key pressed
-            handle_keypress(event)
+        bodies[1].v.dy = -(
+            ((G * bodies[0].m) / DISTANCE * (bodies[1].m / (bodies[0].m + bodies[1].m)))
+            ** 0.5
+        )
 
-        elif event.type == pygame.WINDOWSIZECHANGED:  # Window resize
-            handle_window_resize()
+    interactions.append(Interaction(bodies[0], bodies[1]))
 
-    # Clear screen to black
-    screen.fill("black")
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:  # X clicked at top of window
+                finish()
 
-    for body in bodies:
-        # Draw bodies even if simulation is paused to enable zooming when paused
-        body.draw(screen)
+            elif event.type == pygame.KEYDOWN:  # Key pressed
+                handle_keypress(event)
 
-    if SIMULATION_PAUSED:
-        # Don't update anything if simulation is paused
-        continue
+            elif event.type == pygame.WINDOWSIZECHANGED:  # Window resize
+                handle_window_resize()
 
-    # Update locations, velocities, etc.
-    for interaction in interactions:
-        interaction.update()
+        # Clear screen to black
+        screen.fill("black")
 
-    # Update bodies for next frame
-    for body in bodies:
-        body.update(TIMESTEP)
+        if SIMULATION_PAUSED:
+            # Don't update anything if simulation is paused
+            continue
 
-    # refresh the screen
-    pygame.display.flip()
-    # maintain frame rate
-    clock.tick(FPS)
+        for body in bodies:
+            body.draw(screen, world_params)
+
+        # Update interaction parameters and keep bodies in view
+        for interaction in interactions:
+            interaction.update()
+            world_params = interaction.follow_bodies(world_params)
+
+        # Update bodies for next frame
+        for body in bodies:
+            body.update(TIMESTEP)
+
+        # refresh the screen
+        pygame.display.flip()
+        # maintain frame rate
+        clock.tick(FPS)
