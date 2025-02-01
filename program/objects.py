@@ -351,22 +351,22 @@ class Interaction:
         for body in self.bodies:
             shift = (body.v * SCALE_FACTOR**6 * 50 / world_params.total_world_size)  # TODO find better v-dependent formula
             if world_params.world_limits.dy - body.pos.dy < world_params.total_world_size.dy * 0.1:
-                print(f"{body.name} moved the viewport down by {shift.dy} with speed {body.v}")
+                print(f"{body.name} moved the viewport down by {shift.dy:.2e}")
                 # Move the viewport down to keep bodies in view
                 world_params.world_limits.dy += shift.dy
                 world_params.world_start.dy += shift.dy
             elif world_params.world_limits.dy - body.pos.dy > world_params.total_world_size.dy * 0.9:
-                print(f"{body.name} moved the viewport up by {shift.dy}")
+                print(f"{body.name} moved the viewport up by {shift.dy:.2e}")
                 # Move the viewport up to keep bodies in view
                 world_params.world_limits.dy -= shift.dy
                 world_params.world_start.dy -= shift.dy
 
             if world_params.world_limits.dx - body.pos.dx < world_params.total_world_size.dx * 0.1:
-                print(f"{body.name} moved the viewport right by {shift.dx}")
+                print(f"{body.name} moved the viewport right by {shift.dx:.2e}")
                 world_params.world_limits.dx += shift.dx
                 world_params.world_start.dx += shift.dx
             elif world_params.world_limits.dx - body.pos.dx > world_params.total_world_size.dx * 0.9:
-                print(f"{body.name} moved the viewport left by {shift.dx}")
+                print(f"{body.name} moved the viewport left by {shift.dx:.2e}")
                 world_params.world_limits.dx -= shift.dx
                 world_params.world_start.dx -= shift.dx
 
