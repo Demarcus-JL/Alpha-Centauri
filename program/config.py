@@ -1,7 +1,7 @@
 """Module to store configuration variables for the simulation."""
 
 # Constants
-FPS: int = 120  # can be adjusted using up/down arrow keys during the simulation
+FPS: int = 60  # can be adjusted using up/down arrow keys during the simulation
 # Simulated seconds that pass per frame
 TIMESTEP: float = 1e8  # ca. 3.17 years on earth
 START_SCREEN_SIZE: tuple[int, int] = (700, 700)  # screen resolution in px
